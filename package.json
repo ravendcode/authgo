@@ -1,0 +1,34 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm i"
+  },
+  "keywords": [],
+  "author": "ravendcode",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-core": "^6.23.1",
+    "babel-eslint": "^7.1.1",
+    "eslint": "^3.17.1",
+    "eslint-config-google": "^0.7.1",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-react": "^6.10.0",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-polyfill": "^6.23.0",
+    "babel-preset-env": "^1.2.2",
+    "babel-preset-react": "^6.23.0",
+    "babel-register": "^6.24.1"
+  },
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "jquery": "^3.1.1",
+    "moment": "^2.18.1"
+
+  },
+  "engines": {
+    "node": "6.11.0"
+  }
+}
