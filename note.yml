@@ -1,4 +1,6 @@
 csrf
-htmlescape
+register
+db
+reset_password
 video:
   2

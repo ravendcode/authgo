@@ -4,6 +4,8 @@ import (
 	"html"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/securecookie"
 )
 
 func panicRecoveryHandler(next http.Handler) http.Handler {
@@ -18,23 +20,57 @@ func panicRecoveryHandler(next http.Handler) http.Handler {
 	})
 }
 
-func authMdw(next http.Handler) http.Handler {
+func authMdw(render *Render, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if render.App.IsAuth {
-			next.ServeHTTP(w, r)
+		if !render.App.IsAuth {
+			path := html.EscapeString(r.URL.Path)[1:]
+			http.Redirect(w, r, "/login?next="+path, 302)
 			return
 		}
-		path := html.EscapeString(r.URL.Path)[1:]
-		http.Redirect(w, r, "/login?next="+path, 301)
+
+		next.ServeHTTP(w, r)
 	})
 }
 
-func guestMdw(next http.Handler) http.Handler {
+func cookieMdw(render *Render, scookie *securecookie.SecureCookie, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !render.App.IsAuth {
-			next.ServeHTTP(w, r)
+		cookie, err := r.Cookie("auth")
+		if err != nil {
+			if err == http.ErrNoCookie {
+				render.App.IsAuth = false
+				render.App.User = nil
+				next.ServeHTTP(w, r)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, "/me", 301)
+		var user *User
+		if err = scookie.Decode("auth", cookie.Value, &user); err != nil {
+			cookie.MaxAge = -1
+			http.SetCookie(w, cookie)
+			render.App.IsAuth = false
+			render.App.User = nil
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, userMemory := range users {
+			if user.ID == userMemory.ID {
+				render.App.IsAuth = true
+				render.App.User = user
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+	})
+}
+
+func guestMdw(render *Render, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if render.App.IsAuth {
+			http.Redirect(w, r, "/", 301)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }

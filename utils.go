@@ -25,13 +25,9 @@ type App struct {
 	IsAuth bool
 }
 
-// // IsAuth func
-// func (a *App) IsAuth() bool {
-// 	return false
-// }
-
 // HTML func
 func (r *Render) HTML(w http.ResponseWriter, name string, data interface{}) {
+	r.SendStatus(w, r.status)
 	output, err := template.New("").Delims("{{", "}}").ParseFiles(
 		fmt.Sprintf("templates/%s.html", name),
 		fmt.Sprintf("templates/layouts/%s.html", r.layout),
@@ -63,14 +59,14 @@ func (r *Render) Status(status int) *Render {
 
 // SendStatus method
 func (r *Render) SendStatus(w http.ResponseWriter, status int) {
-	w.WriteHeader(r.status)
+	w.WriteHeader(status)
+	r.status = http.StatusOK
 }
 
 // JSON method
 func (r *Render) JSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(r.status)
-	r.status = http.StatusOK
+	r.SendStatus(w, r.status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

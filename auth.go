@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"html"
 	"net/http"
+
+	"github.com/gorilla/securecookie"
 )
 
 // User model
@@ -27,10 +28,12 @@ type loginForm struct {
 }
 
 type loginHandler struct {
-	render *Render
+	config  *Config
+	render  *Render
+	scookie *securecookie.SecureCookie
 }
 
-func (l *loginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *loginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	form := new(loginForm)
 	form.SetFields("username", "rememberMe")
 	if r.Method == "POST" {
@@ -44,11 +47,22 @@ func (l *loginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if form.Validate() {
 			for _, user := range users {
 				if user.Username == r.FormValue("username") && user.Password == r.FormValue("password") {
-					l.render.App.IsAuth = true
-					l.render.App.User = &user
-					if r.FormValue("rememberMe") == "on" {
-						fmt.Println("on")
+					enc, err := h.scookie.Encode("auth", &user)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
 					}
+
+					cookie := &http.Cookie{
+						Name:  "auth",
+						Value: enc,
+						Path:  "/",
+					}
+
+					if r.FormValue("rememberMe") == "on" {
+						cookie.MaxAge = config.RemeberMe
+					}
+					http.SetCookie(w, cookie)
 					if next := r.URL.Query().Get("next"); next != "" {
 						http.Redirect(w, r, "/"+html.EscapeString(next), 301)
 						return
@@ -60,19 +74,26 @@ func (l *loginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			form.Errors["username"] = "Incorrect username or password."
 		}
-
 	}
-	l.render.HTML(w, "auth/login", form)
+	h.render.HTML(w, "auth/login", form)
 }
 
 type logoutHandler struct {
 	render *Render
 }
 
-func (l *logoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *logoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// w.Write([]byte("logoutHandler"))
-	l.render.App.IsAuth = false
-	l.render.App.User = nil
+	cookie, err := r.Cookie("auth")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	cookie.MaxAge = -1
+	http.SetCookie(w, cookie)
+	h.render.App.IsAuth = false
+	h.render.App.User = nil
+
 	http.Redirect(w, r, "/login", 301)
 }
 
@@ -84,6 +105,6 @@ type meHandler struct {
 	render *Render
 }
 
-func (m *meHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	m.render.HTML(w, "auth/me", nil)
+func (h *meHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.render.HTML(w, "auth/me", nil)
 }
