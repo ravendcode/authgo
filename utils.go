@@ -20,15 +20,15 @@ type Render struct {
 
 // App struct
 type App struct {
-	Name string
-	User User
-	// IsAuth bool
+	Name   string
+	User   *User
+	IsAuth bool
 }
 
-// IsAuth func
-func (a *App) IsAuth() bool {
-	return false
-}
+// // IsAuth func
+// func (a *App) IsAuth() bool {
+// 	return false
+// }
 
 // HTML func
 func (r *Render) HTML(w http.ResponseWriter, name string, data interface{}) {
@@ -44,7 +44,6 @@ func (r *Render) HTML(w http.ResponseWriter, name string, data interface{}) {
 	templates := template.Must(output, err)
 	r.Data = data
 	r.App.Name = config.AppName
-	// r.App.IsAuth = true
 	if err := templates.ExecuteTemplate(w, r.layout, r); err != nil {
 		log.Fatal(err.Error())
 	}
