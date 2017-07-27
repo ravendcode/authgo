@@ -54,14 +54,22 @@ func cookieMdw(render *Render, scookie *securecookie.SecureCookie, next http.Han
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		userFound := false
 		for _, userMemory := range users {
 			if user.ID == userMemory.ID {
+				userFound = true
 				render.App.IsAuth = true
 				render.App.User = user
-				next.ServeHTTP(w, r)
-				return
+				break
 			}
 		}
+		if !userFound {
+			cookie.MaxAge = -1
+			http.SetCookie(w, cookie)
+			render.App.IsAuth = false
+			render.App.User = nil
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
