@@ -6,16 +6,21 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/csrf"
 )
 
 // Render util
 
 // Render struct
 type Render struct {
-	layout string
-	status int
-	App    App
-	Data   interface{}
+	layout    string
+	status    int
+	App       App
+	Data      interface{}
+	CSRFInput template.HTML
+	CSRFToken string
+	// csrf.TemplateTag: csrf.TemplateField(r),
 }
 
 // App struct
@@ -26,11 +31,11 @@ type App struct {
 }
 
 // HTML func
-func (r *Render) HTML(w http.ResponseWriter, name string, data interface{}) {
-	r.SendStatus(w, r.status)
+func (rr *Render) HTML(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
+	rr.SendStatus(w, rr.status)
 	output, err := template.New("").Delims("{{", "}}").ParseFiles(
 		fmt.Sprintf("templates/%s.html", name),
-		fmt.Sprintf("templates/layouts/%s.html", r.layout),
+		fmt.Sprintf("templates/layouts/%s.html", rr.layout),
 		fmt.Sprintf("templates/partials/_nav.html"),
 		// fmt.Sprintf("templates/partials/_user.html"),
 	)
@@ -38,35 +43,42 @@ func (r *Render) HTML(w http.ResponseWriter, name string, data interface{}) {
 		log.Fatal(err.Error())
 	}
 	templates := template.Must(output, err)
-	r.Data = data
-	r.App.Name = config.AppName
-	if err := templates.ExecuteTemplate(w, r.layout, r); err != nil {
+	rr.Data = data
+	rr.App.Name = config.AppName
+	// rr.CSRFInput = csrf.TemplateField(r)
+	token := csrf.Token(r)
+	// w.Header().Set("X-CSRF-Token", token)
+	rr.CSRFInput = template.HTML(fmt.Sprintf(`<input type="hidden" name="%s" value="%s">`,
+		"gorilla.csrf.Token", token))
+	rr.CSRFToken = token
+
+	if err := templates.ExecuteTemplate(w, rr.layout, rr); err != nil {
 		log.Fatal(err.Error())
 	}
 }
 
 // Layout method
-func (r *Render) Layout(name string) *Render {
-	r.layout = name
-	return r
+func (rr *Render) Layout(name string) *Render {
+	rr.layout = name
+	return rr
 }
 
 // Status method
-func (r *Render) Status(status int) *Render {
-	r.status = status
-	return r
+func (rr *Render) Status(status int) *Render {
+	rr.status = status
+	return rr
 }
 
 // SendStatus method
-func (r *Render) SendStatus(w http.ResponseWriter, status int) {
+func (rr *Render) SendStatus(w http.ResponseWriter, status int) {
 	w.WriteHeader(status)
-	r.status = http.StatusOK
+	rr.status = http.StatusOK
 }
 
 // JSON method
-func (r *Render) JSON(w http.ResponseWriter, data interface{}) {
+func (rr *Render) JSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	r.SendStatus(w, r.status)
+	rr.SendStatus(w, rr.status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -103,7 +115,7 @@ func (f *Form) Populate(r *http.Request) {
 	}
 }
 
-// Validate method
-func (f *Form) Validate() bool {
+// IsValid method
+func (f *Form) IsValid() bool {
 	return len(f.Errors) == 0
 }

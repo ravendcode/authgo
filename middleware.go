@@ -8,7 +8,11 @@ import (
 	"github.com/gorilla/securecookie"
 )
 
-func panicRecoveryHandler(next http.Handler) http.Handler {
+type ctxKey int
+
+const renderKey ctxKey = 0
+
+func panicRecoveryMdw(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {

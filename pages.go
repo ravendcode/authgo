@@ -1,13 +1,15 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type homeHandler struct {
 	render *Render
 }
 
 func (h *homeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.render.HTML(w, "pages/home", nil)
+	h.render.HTML(w, r, "pages/home", map[string]interface{}{"lol": "<script>alert(1)</script>"})
 }
 
 type aboutHandler struct {
@@ -15,7 +17,7 @@ type aboutHandler struct {
 }
 
 func (h *aboutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.render.HTML(w, "pages/about", nil)
+	h.render.HTML(w, r, "pages/about", nil)
 }
 
 type notFoundHandler struct {
@@ -23,5 +25,5 @@ type notFoundHandler struct {
 }
 
 func (h *notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.render.Status(http.StatusNotFound).HTML(w, "pages/404", nil)
+	h.render.Status(http.StatusNotFound).HTML(w, r, "pages/404", nil)
 }

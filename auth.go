@@ -44,7 +44,7 @@ func (h *loginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("password") == "" {
 			form.Errors["password"] = "The password field is required."
 		}
-		if form.Validate() {
+		if form.IsValid() {
 			for _, user := range users {
 				if user.Username == r.FormValue("username") && user.Password == r.FormValue("password") {
 					enc, err := h.scookie.Encode("auth", &user)
@@ -75,7 +75,7 @@ func (h *loginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			form.Errors["username"] = "Incorrect username or password."
 		}
 	}
-	h.render.HTML(w, "auth/login", form)
+	h.render.HTML(w, r, "auth/login", form)
 }
 
 type logoutHandler struct {
@@ -106,5 +106,5 @@ type meHandler struct {
 }
 
 func (h *meHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.render.HTML(w, "auth/me", nil)
+	h.render.HTML(w, r, "auth/me", nil)
 }
